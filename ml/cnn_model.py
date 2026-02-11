@@ -1,6 +1,7 @@
 import tensorflow as tf
 
-model = tf.keras.Sequential([
+def build_cnn_model():
+    model = tf.keras.Sequential([
     tf.keras.Input(shape=(224, 224, 3)),
 
     # Block 1
@@ -30,5 +31,4 @@ model = tf.keras.Sequential([
     tf.keras.layers.Dropout(0.5),
     tf.keras.layers.Dense(3, activation="softmax")
 ])
-
-model.summary()
+    return model
