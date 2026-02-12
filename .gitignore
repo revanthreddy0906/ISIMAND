@@ -12,3 +12,6 @@ venv/
 
 # OS
 .DS_Store
+# Colab Notebooks and Large Datasets
+ml/train_colab.ipynb
+isimand_dataset.zip
