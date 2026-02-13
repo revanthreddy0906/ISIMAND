@@ -19,10 +19,12 @@ moderate_ds = tf.keras.utils.image_dataset_from_directory(
     os.path.join(train_dir, "moderate_damage"),
     image_size=image_size,
     batch_size=None,
-    labels=None,  # IMPORTANT
+    labels=None,
     shuffle=True
 )
+moderate_ds = moderate_ds.map(lambda x: (x, tf.constant([1.0, 0.0, 0.0])))
 
+# 2. No Damage (Index 1 -> [0, 1, 0])
 no_damage_ds = tf.keras.utils.image_dataset_from_directory(
     os.path.join(train_dir, "no_damage"),
     image_size=image_size,
@@ -30,30 +32,34 @@ no_damage_ds = tf.keras.utils.image_dataset_from_directory(
     labels=None,
     shuffle=True
 )
+no_damage_ds = no_damage_ds.map(lambda x: (x, tf.constant([0.0, 1.0, 0.0])))
 
-severe_ds = tf.keras.utils.image_dataset_from_directory(
+# 3. Severe Damage (Index 2 -> [0, 0, 1])
+severe_damage_ds = tf.keras.utils.image_dataset_from_directory(
     os.path.join(train_dir, "severe_damage"),
     image_size=image_size,
     batch_size=None,
     labels=None,
     shuffle=True
 )
+severe_damage_ds = severe_damage_ds.map(lambda x: (x, tf.constant([0.0, 0.0, 1.0])))
 
 val_ds = tf.keras.utils.image_dataset_from_directory(
     val_dir,
     image_size=image_size,
     batch_size=batch_size,
-    label_mode="categorical"
+    label_mode="categorical",
+    shuffle=False
 )
 
-normalization_layer = tf.keras.layers.Rescaling(1./255) 
+normalization_layer = tf.keras.layers.Rescaling(1./255)
 
 moderate_ds = moderate_ds.map(lambda x,y: (normalization_layer(x),y))
 no_damage_ds = no_damage_ds.map(lambda x,y: (normalization_layer(x),y))
 severe_damage_ds = severe_damage_ds.map(lambda x,y: (normalization_layer(x),y))
 val_ds = val_ds.map(lambda x,y: (normalization_layer(x),y))
 
-#Oversample the minority classes
+# Oversample the minority classes
 moderate_ds = moderate_ds.repeat()
 no_damage_ds = no_damage_ds.repeat()
 severe_damage_ds = severe_damage_ds.repeat()
