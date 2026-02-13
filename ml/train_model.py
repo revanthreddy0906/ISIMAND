@@ -66,7 +66,7 @@ severe_damage_ds = severe_damage_ds.repeat()
 
 balanced_train_ds = tf.data.Dataset.sample_from_datasets(
     [moderate_ds, no_damage_ds, severe_damage_ds],
-    weights=[0.4, 0.3, 0.3]  # moderate boosted
+    weights=[0.5, 0.25, 0.25]  # moderate boosted
 )
 balanced_train_ds = balanced_train_ds.batch(batch_size)
 balanced_train_ds = balanced_train_ds.prefetch(tf.data.AUTOTUNE)
@@ -90,7 +90,7 @@ model.compile(
 
 early_stopping = tf.keras.callbacks.EarlyStopping(
     monitor="val_loss",
-    patience=5,
+    patience=8,
     restore_best_weights=True,
     verbose=1
 )
