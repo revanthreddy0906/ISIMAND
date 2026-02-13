@@ -15,13 +15,29 @@ val_dir = "data/processed/isimand_dataset/val"
 model_save_path = "ml/models/cnn_model.h5"
 
 
-train_ds = tf.keras.utils.image_dataset_from_directory(
-    train_dir,
+moderate_ds = tf.keras.utils.image_dataset_from_directory(
+    os.path.join(train_dir, "moderate_damage"),
     image_size=image_size,
-    batch_size=batch_size,
-    label_mode="categorical"
+    batch_size=None,
+    labels=None,  # IMPORTANT
+    shuffle=True
 )
-class_names = train_ds.class_names
+
+no_damage_ds = tf.keras.utils.image_dataset_from_directory(
+    os.path.join(train_dir, "no_damage"),
+    image_size=image_size,
+    batch_size=None,
+    labels=None,
+    shuffle=True
+)
+
+severe_ds = tf.keras.utils.image_dataset_from_directory(
+    os.path.join(train_dir, "severe_damage"),
+    image_size=image_size,
+    batch_size=None,
+    labels=None,
+    shuffle=True
+)
 
 val_ds = tf.keras.utils.image_dataset_from_directory(
     val_dir,
@@ -30,24 +46,17 @@ val_ds = tf.keras.utils.image_dataset_from_directory(
     label_mode="categorical"
 )
 
-normalization_layer = tf.keras.layers.Rescaling(1./255)
+normalization_layer = tf.keras.layers.Rescaling(1./255) 
 
-train_ds = train_ds.map(lambda x,y: (normalization_layer(x),y))
+moderate_ds = moderate_ds.map(lambda x,y: (normalization_layer(x),y))
+no_damage_ds = no_damage_ds.map(lambda x,y: (normalization_layer(x),y))
+severe_damage_ds = severe_damage_ds.map(lambda x,y: (normalization_layer(x),y))
 val_ds = val_ds.map(lambda x,y: (normalization_layer(x),y))
-
-def make_class_dataset(class_index):
-    return train_ds.filter(
-        lambda x,y: tf.argmax(y) == class_index
-    )
-
-moderate_ds = make_class_dataset(0)
-no_damage_ds = make_class_dataset(1)
-severe_damage_ds = make_class_dataset(2)
 
 #Oversample the minority classes
 moderate_ds = moderate_ds.repeat()
-severe_damage_ds = severe_damage_ds.repeat()
 no_damage_ds = no_damage_ds.repeat()
+severe_damage_ds = severe_damage_ds.repeat()
 
 balanced_train_ds = tf.data.Dataset.sample_from_datasets(
     [moderate_ds, no_damage_ds, severe_damage_ds],
