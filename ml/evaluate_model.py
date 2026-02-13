@@ -3,6 +3,7 @@ import tensorflow as tf
 import os
 import numpy as np
 from sklearn.metrics import confusion_matrix , classification_report
+from keras_cv.losses import FocalLoss
 
 val_dir = "data/processed/isimand_dataset/val"
 model_path = "ml/models/cnn_model.h5"
@@ -12,15 +13,15 @@ batch_size = 32
 
 class_names = ["no_damage","moderate_damage","severe_damage"]
 
-print("[INFO] Loading model from {model_path}")
-model = tf.keras.models.load_model(model_path)
+print(f"[INFO] Loading model from {model_path}")
+model = tf.keras.models.load_model(model_path, compile=False)
 
 val_ds = tf.keras.utils.image_dataset_from_directory(
     val_dir,
     image_size=image_size,
     batch_size=batch_size,
     shuffle=False,
-    label_mode="int"
+    label_mode="categorical"
 )
 
 normalization_layer = tf.keras.layers.Rescaling(1./255)
@@ -32,7 +33,8 @@ y_pred = []
 for images,labels in val_ds:
     predictions = model.predict(images,verbose=0)
     prediction_classes = np.argmax(predictions,axis=1)
-    y_true.extend(labels.numpy())
+    true_classes = np.argmax(labels.numpy(), axis=1)
+    y_true.extend(true_classes)
     y_pred.extend(prediction_classes)
 
 y_true = np.array(y_true)
