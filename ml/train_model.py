@@ -12,7 +12,7 @@ learning_rate = 3e-5
 train_dir = "data/processed/isimand_dataset/train"
 val_dir = "data/processed/isimand_dataset/val"
 
-model_save_path = "ml/models/cnn_model.h5"
+model_save_path = "ml/models/cnn_model.keras"
 
 
 moderate_ds = tf.keras.utils.image_dataset_from_directory(
@@ -66,7 +66,7 @@ severe_damage_ds = severe_damage_ds.repeat()
 
 balanced_train_ds = tf.data.Dataset.sample_from_datasets(
     [moderate_ds, no_damage_ds, severe_damage_ds],
-    weights=[0.5, 0.25, 0.25]  # moderate boosted
+    weights=[0.30, 0.40, 0.30]  # moderate boosted
 )
 balanced_train_ds = balanced_train_ds.batch(batch_size)
 balanced_train_ds = balanced_train_ds.prefetch(tf.data.AUTOTUNE)
@@ -86,7 +86,7 @@ model = build_cnn_model(data_augmentation)
 
 model.compile(
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate),
-    loss = tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1),
+    loss = tf.keras.losses.CategoricalCrossentropy(),
     metrics = ["accuracy"]
 )
 

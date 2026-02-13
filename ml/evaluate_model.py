@@ -6,7 +6,7 @@ from sklearn.metrics import confusion_matrix , classification_report
 from keras_cv.losses import FocalLoss
 
 val_dir = "data/processed/isimand_dataset/val"
-model_path = "ml/models/cnn_model.h5"
+model_path = "ml/models/cnn_model.keras"
 
 image_size = (224,224)
 batch_size = 32
