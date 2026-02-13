@@ -7,7 +7,7 @@ import os
 batch_size = 32
 epochs = 20
 image_size = (224,224)
-learning_rate = 5e-5
+learning_rate = 3e-5
 
 train_dir = "data/processed/isimand_dataset/train"
 val_dir = "data/processed/isimand_dataset/val"
@@ -74,9 +74,11 @@ balanced_train_ds = balanced_train_ds.prefetch(tf.data.AUTOTUNE)
 val_ds = val_ds.prefetch(tf.data.AUTOTUNE)
 
 data_augmentation = tf.keras.Sequential([
-    tf.keras.layers.RandomFlip("horizontal"),
-    tf.keras.layers.RandomRotation(0.05),
-    tf.keras.layers.RandomZoom(0.1),
+    tf.keras.layers.RandomFlip("horizontal_and_vertical"),
+    tf.keras.layers.RandomRotation(0.2),
+    tf.keras.layers.RandomZoom(0.2),
+    tf.keras.layers.RandomContrast(0.2),
+    tf.keras.layers.RandomBrightness(0.2),
 ])
 
 
@@ -84,7 +86,7 @@ model = build_cnn_model(data_augmentation)
 
 model.compile(
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate),
-    loss = tf.keras.losses.CategoricalCrossentropy(),
+    loss = tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1),
     metrics = ["accuracy"]
 )
 
