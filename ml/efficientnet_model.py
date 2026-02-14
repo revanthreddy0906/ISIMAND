@@ -1,4 +1,4 @@
-import tendorflow as tf
+import tensorflow as tf
 from tensorflow.keras import models
 
 def build_efficientnet_model(num_classes=3):
