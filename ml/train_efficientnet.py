@@ -30,9 +30,9 @@ class_names = train_ds.class_names
 print(class_names)
 
 class_weights = {
-    0: 12.4,
-    1: 0.42,
-    2: 1.8
+    0: 3.5,
+    1: 0.65,
+    2: 1.34
 }
 
 preprocess_input = tf.keras.applications.efficientnet.preprocess_input
