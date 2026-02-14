@@ -16,18 +16,24 @@ train_ds = tf.keras.utils.image_dataset_from_directory(
     train_dir,
     image_size=image_size,
     batch_size=batch_size,
-    label_mode="categorical"
+    label_mode="int"
 )
 
 val_ds = tf.keras.utils.image_dataset_from_directory(
     val_dir,
     image_size=image_size,
     batch_size=batch_size,
-    label_mode="categorical"
+    label_mode="int"
 )
 
 class_names = train_ds.class_names
 print(class_names)
+
+class_weights = {
+    0: 12.4,
+    1: 0.42,
+    2: 1.8
+}
 
 preprocess_input = tf.keras.applications.efficientnet.preprocess_input
 
@@ -43,7 +49,7 @@ model.summary()
 
 model.compile(
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate),
-    loss = tf.keras.losses.CategoricalCrossentropy(),
+    loss = tf.keras.losses.SparseCategoricalCrossentropy(),
     metrics = ["accuracy"]
 )
 
@@ -60,7 +66,8 @@ history = model.fit(
     train_ds,
     validation_data=val_ds,
     epochs=epochs,
-    callbacks=[early_stopping]
+    callbacks=[early_stopping],
+    class_weight=class_weights
 )
 
 os.makedirs(os.path.dirname(model_save_path),exist_ok=True)
