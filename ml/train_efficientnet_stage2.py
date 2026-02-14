@@ -1,6 +1,6 @@
 import tensorflow as tf
 import os
-
+from losses import sparse_categorical_focal_loss
 from efficientnet_model import build_efficientnet_model
 
 # -----------------------
@@ -66,8 +66,8 @@ for layer in base_model.layers[-30:]:
 # Compile with small LR
 # -----------------------
 model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
-    loss=tf.keras.losses.SparseCategoricalCrossentropy(),
+    optimizer=tf.keras.optimizers.Adam(learning_rate=1e-5),
+    loss=sparse_categorical_focal_loss(gamma=2.0),
     metrics=["accuracy"]
 )
 
