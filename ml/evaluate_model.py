@@ -21,11 +21,11 @@ val_ds = tf.keras.utils.image_dataset_from_directory(
     image_size=image_size,
     batch_size=batch_size,
     shuffle=False,
-    label_mode="categorical"
+    label_mode="int"
 )
 
-normalization_layer = tf.keras.layers.Rescaling(1./255)
-val_ds = val_ds.map(lambda x,y: (normalization_layer(x),y))
+preprocess_input = tf.keras.applications.efficientnet.preprocess_input
+val_ds = val_ds.map(lambda x, y: (preprocess_input(x), y))
 
 y_true = []
 y_pred = []
@@ -33,7 +33,7 @@ y_pred = []
 for images,labels in val_ds:
     predictions = model.predict(images,verbose=0)
     prediction_classes = np.argmax(predictions,axis=1)
-    true_classes = np.argmax(labels.numpy(), axis=1)
+    true_classes = labels.numpy()
     y_true.extend(true_classes)
     y_pred.extend(prediction_classes)
 
