@@ -16,3 +16,5 @@ venv/
 ml/train_colab.ipynb
 ml/train_kaggle.ipynb
 isimand_dataset.zip
+
+.vscode/
