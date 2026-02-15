@@ -1,76 +1,137 @@
-import tensorflow as tf
+import sys
 import os
-from efficientnet_model import build_efficientnet_model
+import tensorflow as tf
+import numpy as np
+import pandas as pd
 
-batch_size = 32
-epochs = 20
-image_size = (224,224)
-learning_rate = 5e-4
+# Add project root to path
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(PROJECT_ROOT)
 
-train_dir = "data/processed/isimand_dataset/train"
-val_dir = "data/processed/isimand_dataset/val"
+from dataset import XView2BuildingDataset
+from losses import WeightedFocalLoss
 
-model_save_path = "ml/models/efficientnet_stage1.keras"
 
-train_ds = tf.keras.utils.image_dataset_from_directory(
-    train_dir,
-    image_size=image_size,
-    batch_size=batch_size,
-    label_mode="int"
+# =========================
+# CONFIG
+# =========================
+METADATA_PATH = "data/xview2_metadata.csv"
+MODEL_SAVE_PATH = "ml/models/efficientnet_stage1.keras"
+
+PATCH_SIZE = 128
+BATCH_SIZE = 32
+EPOCHS = 15
+LEARNING_RATE = 1e-4
+
+
+# =========================
+# CREATE TF.DATA DATASET
+# =========================
+
+def create_tf_dataset(metadata_csv, batch_size):
+
+    dataset_obj = XView2BuildingDataset(metadata_csv, patch_size=PATCH_SIZE)
+
+    def generator():
+        for i in range(len(dataset_obj)):
+            sample = dataset_obj[i]
+            if sample is None:
+                continue
+            yield sample
+
+    output_signature = (
+        tf.TensorSpec(shape=(PATCH_SIZE, PATCH_SIZE, 3), dtype=tf.float32),
+        tf.TensorSpec(shape=(), dtype=tf.int32),
+    )
+
+    tf_dataset = tf.data.Dataset.from_generator(
+        generator,
+        output_signature=output_signature
+    )
+
+    tf_dataset = tf_dataset.shuffle(10000)
+    tf_dataset = tf_dataset.batch(batch_size)
+    tf_dataset = tf_dataset.prefetch(tf.data.AUTOTUNE)
+
+    return tf_dataset
+
+
+print("Building dataset...")
+train_ds = create_tf_dataset(METADATA_PATH, BATCH_SIZE)
+
+
+# =========================
+# BUILD MODEL
+# =========================
+
+def build_model():
+
+    inputs = tf.keras.Input(shape=(PATCH_SIZE, PATCH_SIZE, 3))
+
+    base_model = tf.keras.applications.EfficientNetB0(
+        include_top=False,
+        weights="imagenet",
+        input_tensor=inputs
+    )
+
+    base_model.trainable = False  # Stage-1 freeze
+
+    x = tf.keras.layers.GlobalAveragePooling2D()(base_model.output)
+    x = tf.keras.layers.Dropout(0.4)(x)
+    outputs = tf.keras.layers.Dense(3, activation="softmax")(x)
+
+    model = tf.keras.Model(inputs, outputs)
+    return model
+
+
+model = build_model()
+
+
+# =========================
+# LOSS FUNCTION
+# =========================
+
+loss_fn = WeightedFocalLoss(
+    alpha=[0.15, 0.35, 0.5],  # no_damage, severe, destroyed
+    gamma=2.0
 )
 
-val_ds = tf.keras.utils.image_dataset_from_directory(
-    val_dir,
-    image_size=image_size,
-    batch_size=batch_size,
-    label_mode="int"
-)
-
-class_names = train_ds.class_names
-print(class_names)
-
-class_weights = {
-    0: 3.5,
-    1: 0.65,
-    2: 1.34
-}
-
-preprocess_input = tf.keras.applications.efficientnet.preprocess_input
-
-train_ds = train_ds.map(lambda x, y: (preprocess_input(x), y))
-val_ds = val_ds.map(lambda x, y: (preprocess_input(x), y))
-
-train_ds = train_ds.prefetch(tf.data.AUTOTUNE)
-val_ds = val_ds.prefetch(tf.data.AUTOTUNE)
-
-model, base_model = build_efficientnet_model()
-
-model.summary()
 
 model.compile(
-    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate),
-    loss = tf.keras.losses.SparseCategoricalCrossentropy(),
-    metrics = ["accuracy"]
+    optimizer=tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE),
+    loss=loss_fn,
+    metrics=["accuracy"]
 )
+
+
+# =========================
+# CALLBACKS
+# =========================
 
 early_stopping = tf.keras.callbacks.EarlyStopping(
-    monitor="val_loss",
-    patience=8,
-    restore_best_weights=True,
-    verbose=1
+    monitor="loss",
+    patience=3,
+    restore_best_weights=True
 )
 
-print("Starting EfficientNet Training")
+checkpoint = tf.keras.callbacks.ModelCheckpoint(
+    MODEL_SAVE_PATH,
+    save_best_only=True,
+    monitor="loss"
+)
+
+
+# =========================
+# TRAIN
+# =========================
+
+print("Starting Stage-1 training...")
 
 history = model.fit(
     train_ds,
-    validation_data=val_ds,
-    epochs=epochs,
-    callbacks=[early_stopping],
-    class_weight=class_weights
+    epochs=EPOCHS,
+    callbacks=[early_stopping, checkpoint]
 )
 
-os.makedirs(os.path.dirname(model_save_path),exist_ok=True)
-model.save(model_save_path)
-
-print(f"[INFO] Training completed. Model saved to {model_save_path}")
+print("Stage-1 training complete.")
+print(f"Model saved to {MODEL_SAVE_PATH}")

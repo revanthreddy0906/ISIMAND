@@ -4,6 +4,7 @@ import pandas as pd
 import tensorflow as tf
 from shapely.geometry import Polygon
 import json
+from shapely import wkt
 
 
 class XView2BuildingDataset:
@@ -19,8 +20,7 @@ class XView2BuildingDataset:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         return img
 
-    def crop_building(self, image, polygon_coords):
-        poly = Polygon(polygon_coords)
+    def crop_building(self, image, poly):
         minx, miny, maxx, maxy = map(int, poly.bounds)
 
         crop = image[miny:maxy, minx:maxx]
@@ -42,7 +42,7 @@ class XView2BuildingDataset:
             data = json.load(f)
 
         building = data["features"]["xy"][row["building_id"]]
-        polygon = building["geometry"]["coordinates"][0]
+        polygon = wkt.loads(building["wkt"])
 
         pre_crop = self.crop_building(pre_img, polygon)
         post_crop = self.crop_building(post_img, polygon)
@@ -51,8 +51,11 @@ class XView2BuildingDataset:
             return None
 
         # Stack to 6 channels
-        stacked = np.concatenate([pre_crop, post_crop], axis=-1)
+        pre = pre_crop.astype("float32") / 255.0
+        post = post_crop.astype("float32") / 255.0
+
+        difference = post - pre
 
         label = row["damage_class"]
 
-        return stacked.astype(np.float32) / 255.0, label
+        return difference, label
