@@ -1,32 +1,28 @@
 import tensorflow as tf
 
+class WeightedFocalLoss(tf.keras.losses.Loss):
+    def __init__(self, alpha, gamma=2.0):
+        super().__init__()
+        self.alpha = tf.constant(alpha, dtype=tf.float32)
+        self.gamma = gamma
 
-def sparse_categorical_focal_loss(gamma=2.0):
+    def call(self, y_true, y_pred):
+        # Convert integer labels to one-hot
+        y_true = tf.one_hot(tf.cast(y_true, tf.int32), depth=tf.shape(y_pred)[-1])
 
-    def loss_fn(y_true, y_pred):
-        # Ensure integer labels
-        y_true = tf.cast(y_true, tf.int32)
-
-        # Convert to one-hot
-        num_classes = tf.shape(y_pred)[-1]
-        y_true_one_hot = tf.one_hot(y_true, depth=num_classes)
-
-        # Clip predictions to prevent log(0)
+        # Clip predictions
         epsilon = 1e-7
-        y_pred = tf.clip_by_value(y_pred, epsilon, 1.0 - epsilon)
+        y_pred = tf.clip_by_value(y_pred, epsilon, 1. - epsilon)
 
-        # Compute standard cross entropy
-        cross_entropy = -y_true_one_hot * tf.math.log(y_pred)
+        # Cross entropy
+        ce = -y_true * tf.math.log(y_pred)
 
-        # Compute focal scaling factor
-        focal_factor = tf.pow(1 - y_pred, gamma)
+        # Focal term
+        focal_weight = tf.pow(1 - y_pred, self.gamma)
 
-        # Apply focal factor
-        loss = focal_factor * cross_entropy
+        # Alpha weight
+        alpha_weight = y_true * self.alpha
 
-        # Sum over classes
-        loss = tf.reduce_sum(loss, axis=-1)
+        loss = alpha_weight * focal_weight * ce
 
-        return loss
-
-    return loss_fn
+        return tf.reduce_mean(tf.reduce_sum(loss, axis=1))

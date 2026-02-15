@@ -1,7 +1,7 @@
 import tensorflow as tf
 import os
-from losses import sparse_categorical_focal_loss
 from efficientnet_model import build_efficientnet_model
+from losses import WeightedFocalLoss
 
 # -----------------------
 # Config
@@ -55,19 +55,26 @@ base_model = model.layers[1]  # backbone is second layer
 # -----------------------
 base_model.trainable = True
 
-for layer in base_model.layers[:-30]:
-    layer.trainable = False
+for layer in base_model.layers[-60:]:
+    layer.trainable = True
 
 print("Trainable layers after unfreezing:")
-for layer in base_model.layers[-30:]:
+for layer in base_model.layers[-60:]:
     print(layer.name, layer.trainable)
 
 # -----------------------
 # Compile with small LR
 # -----------------------
+
+
+loss_fn = WeightedFocalLoss(
+    alpha=[0.1, 0.2, 0.7],
+    gamma=2.0
+)
+
 model.compile(
     optimizer=tf.keras.optimizers.Adam(learning_rate=1e-5),
-    loss=sparse_categorical_focal_loss(gamma=2.0),
+    loss=loss_fn,
     metrics=["accuracy"]
 )
 
